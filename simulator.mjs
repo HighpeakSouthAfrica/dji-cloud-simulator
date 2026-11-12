@@ -37,6 +37,8 @@ Usage:
 Options:
   --broker <url>      MQTT broker URL (default: mqtt://localhost:1883)
                       Also settable via MQTT_BROKER env var
+  -u, --user <name>   MQTT username (optional)
+  -p, --password <pw> MQTT password (optional)
   --gateway <sn>      Gateway (dock) serial number (default: DOCK-SN-001)
   --device <sn>       Aircraft serial number (default: AIRCRAFT-SN-001)
   --scenario <name>   Scenario to run (default: patrol)
@@ -56,7 +58,7 @@ Scenarios:
 Config File (--config):
   JSON file to override defaults. All fields optional:
   {
-    "waypoints": [{"lat": 37.7749, "lng": -122.4194}, ...],
+    "waypoints": [{"lat": -26.0642, "lng": 27.9656}, ...],
     "osd_interval_ms": 2000,
     "dock_osd_every_n": 5,
     "hms_alarm_every_n": 20,
@@ -113,6 +115,8 @@ if (configPath) {
 }
 
 const BROKER_URL = getArg('--broker') ?? process.env.MQTT_BROKER ?? 'mqtt://localhost:1883';
+const MQTT_USER = getArg('--user') ?? getArg('-u') ?? undefined;
+const MQTT_PASSWORD = getArg('--password') ?? getArg('-p') ?? undefined;
 const GATEWAY_SN = getArg('--gateway') ?? 'DOCK-SN-001';
 const DEVICE_SN  = getArg('--device')  ?? 'AIRCRAFT-SN-001';
 const SCENARIO   = getArg('--scenario') ?? 'patrol';
@@ -120,14 +124,14 @@ const SCENARIO   = getArg('--scenario') ?? 'patrol';
 // ── Configurable defaults ───────────────────────────────────────────
 
 const DEFAULT_WAYPOINTS = [
-  { lat: 42.3521, lng: -71.0446 },
-  { lat: 42.3535, lng: -71.0430 },
-  { lat: 42.3548, lng: -71.0415 },
-  { lat: 42.3555, lng: -71.0400 },
-  { lat: 42.3540, lng: -71.0390 },
-  { lat: 42.3525, lng: -71.0405 },
-  { lat: 42.3510, lng: -71.0420 },
-  { lat: 42.3521, lng: -71.0446 },
+  { lat: -26.0642, lng: 27.9656 },
+  { lat: -26.0628, lng: 27.9672 },
+  { lat: -26.0615, lng: 27.9687 },
+  { lat: -26.0608, lng: 27.9702 },
+  { lat: -26.0623, lng: 27.9712 },
+  { lat: -26.0638, lng: 27.9697 },
+  { lat: -26.0653, lng: 27.9682 },
+  { lat: -26.0642, lng: 27.9656 },
 ];
 
 const WAYPOINTS          = (Array.isArray(userConfig.waypoints) && userConfig.waypoints.length >= 2)
@@ -204,6 +208,8 @@ if (configPath) {
 console.log();
 
 const client = mqtt.connect(BROKER_URL, {
+  username: MQTT_USER,
+  password: MQTT_PASSWORD,
   clientId: `dji-sim-${Date.now()}`,
   clean: true,
   reconnectPeriod: 3000,   // retry every 3s on disconnect
@@ -217,7 +223,7 @@ client.on('error', (err) => {
     console.error(`\nCould not connect to MQTT broker at ${BROKER_URL}`);
     console.error(`Retrying every 3 seconds... (Ctrl+C to stop)`);
     console.error(`\nQuick fix: docker run -d -p 1883:1883 eclipse-mosquitto:2\n`);
-  } else if (connected) {
+  } else {
     console.error(`MQTT error: ${err.message} (will reconnect)`);
   }
 });
