@@ -1,6 +1,6 @@
-# DJI Cloud API Simulator
+# DJI Cloud Telemetry Simulator
 
-[![CI](https://github.com/YuYongJu/dji-cloud-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/YuYongJu/dji-cloud-simulator/actions/workflows/ci.yml)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Spec-accurate MQTT simulator for the DJI Cloud API. Publishes realistic telemetry, HMS alarms, and mission progress events as if a Matrice 30T drone were connected via DJI Dock 2.
@@ -14,7 +14,7 @@ Built for integration testing, adapter development, and exploring the DJI Cloud 
 docker run -d -p 1883:1883 eclipse-mosquitto:2
 
 # 2. Run the simulator
-npx github:YuYongJu/dji-cloud-simulator
+npx github:HighpeakSouthAfrica/dji-cloud-simulator
 ```
 
 That's it. The simulator connects to `mqtt://localhost:1883` and starts publishing DJI-format MQTT messages.
@@ -23,15 +23,17 @@ That's it. The simulator connects to `mqtt://localhost:1883` and starts publishi
 
 | Scenario | Command | What it does |
 |----------|---------|-------------|
-| **patrol** (default) | `npx github:YuYongJu/dji-cloud-simulator` | Continuous patrol loop. OSD every 2s, dock telemetry every 10s, HMS alarms every 40s. Runs until Ctrl+C. |
-| **mission** | `npx github:YuYongJu/dji-cloud-simulator --scenario mission` | Full mission lifecycle: takeoff, 4 waypoints, landing. Publishes `flighttask_progress` events with nested status/progress/ext. |
-| **hms-alarm** | `npx github:YuYongJu/dji-cloud-simulator --scenario hms-alarm` | Device comes online, fires 5 HMS alarm bursts with escalating cell imbalance. Early bursts show compass interference only; later bursts add battery imbalance when voltage differential exceeds 200mV threshold. |
-| **offline** | `npx github:YuYongJu/dji-cloud-simulator --scenario offline` | Device comes online briefly, sends one OSD frame, then goes offline. Tests device lifecycle handling. |
+| **patrol** (default) | `npx github:HighpeakSouthAfrica/dji-cloud-simulator` | Continuous patrol loop. OSD every 2s, dock telemetry every 10s, HMS alarms every 40s. Runs until Ctrl+C. |
+| **mission** | `npx github:HighpeakSouthAfrica/dji-cloud-simulator --scenario mission` | Full mission lifecycle: takeoff, 4 waypoints, landing. Publishes `flighttask_progress` events with nested status/progress/ext. |
+| **hms-alarm** | `npx github:HighpeakSouthAfrica/dji-cloud-simulator --scenario hms-alarm` | Device comes online, fires 5 HMS alarm bursts with escalating cell imbalance. Early bursts show compass interference only; later bursts add battery imbalance when voltage differential exceeds 200mV threshold. |
+| **offline** | `npx github:HighpeakSouthAfrica/dji-cloud-simulator --scenario offline` | Device comes online briefly, sends one OSD frame, then goes offline. Tests device lifecycle handling. |
 
 ## Options
 
 ```
 --broker <url>      MQTT broker URL (default: mqtt://localhost:1883)
+-u, --user <name>   MQTT username (optional)
+-p, --password <pw> MQTT password (optional)
 --gateway <sn>      Gateway (dock) serial number (default: DOCK-SN-001)
 --device <sn>       Aircraft serial number (default: AIRCRAFT-SN-001)
 --scenario <name>   Scenario to run (default: patrol)
@@ -40,20 +42,33 @@ That's it. The simulator connects to `mqtt://localhost:1883` and starts publishi
 
 The broker URL can also be set via the `MQTT_BROKER` environment variable.
 
+For brokers that require authentication, pass the credentials separately from the broker URL:
+
+```bash
+node simulator.mjs --broker mqtts://broker.example.com:8883 --user my-user --password 'my-password'
+# Short options are also supported:
+node simulator.mjs --broker mqtts://broker.example.com:8883 -u my-user -p 'my-password'
+```
+
+These options are passed to the MQTT client as `username` and `password`, including
+on reconnect. Omit them for brokers that allow anonymous access. Use `mqtts://`
+to encrypt credentials in transit. Command-line credentials may be visible in
+shell history and process listings.
+
 ## Custom Configuration
 
 Use `--config` to override default flight parameters. All fields are optional -- only include what you want to change:
 
 ```bash
-npx github:YuYongJu/dji-cloud-simulator --config my-site.json --scenario patrol
+npx github:HighpeakSouthAfrica/dji-cloud-simulator --config my-site.json --scenario patrol
 ```
 
 ```json
 {
   "waypoints": [
-    { "lat": 37.7749, "lng": -122.4194 },
-    { "lat": 37.7755, "lng": -122.4180 },
-    { "lat": 37.7749, "lng": -122.4194 }
+    { "lat": -26.0642, "lng": 27.9656 },
+    { "lat": -26.0636, "lng": 27.9670 },
+    { "lat": -26.0642, "lng": 27.9656 }
   ],
   "osd_interval_ms": 2000,
   "dock_osd_every_n": 5,
@@ -72,7 +87,7 @@ npx github:YuYongJu/dji-cloud-simulator --config my-site.json --scenario patrol
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `waypoints` | Boston Seaport (8 pts) | Array of `{lat, lng}` for the flight path. Last point should match first for a loop. |
+| `waypoints` | Example patrol loop (8 pts) | Array of `{lat, lng}` for the flight path. Last point should match first for a loop. |
 | `osd_interval_ms` | 2000 | Milliseconds between OSD telemetry publishes |
 | `dock_osd_every_n` | 5 | Publish dock OSD every N OSD cycles |
 | `hms_alarm_every_n` | 20 | Publish HMS alarm every N OSD cycles |
@@ -209,14 +224,14 @@ Connected to broker
 
 [status] Device ONLINE (update_topo)
 [state]  Firmware 07.01.10.01
-[osd]    lat=42.35210 lng=-71.04460 alt=50.0m bat=95% home=0m mode=0 rtk=5
+[osd]    lat=-26.06420 lng=27.96560 alt=50.0m bat=95% home=0m mode=0 rtk=5
 [dock]   temp=23.1C humid=49% cover=closed
-[osd]    lat=42.35210 lng=-71.04460 alt=50.5m bat=95% home=0m mode=4 rtk=5
-[osd]    lat=42.35210 lng=-71.04460 alt=51.0m bat=94% home=0m mode=4 rtk=4
-[osd]    lat=42.35290 lng=-71.04428 alt=52.5m bat=94% home=97m mode=5 rtk=5
-[osd]    lat=42.35380 lng=-71.04396 alt=54.9m bat=93% home=215m mode=5 rtk=5
+[osd]    lat=-26.06392 lng=27.96592 alt=50.5m bat=95% home=45m mode=4 rtk=5
+[osd]    lat=-26.06364 lng=27.96624 alt=51.0m bat=94% home=89m mode=4 rtk=4
+[osd]    lat=-26.06336 lng=27.96656 alt=51.5m bat=94% home=134m mode=5 rtk=5
+[osd]    lat=-26.06308 lng=27.96688 alt=51.9m bat=94% home=178m mode=5 rtk=5
+[osd]    lat=-26.06280 lng=27.96720 alt=52.4m bat=94% home=223m mode=5 rtk=4
 [dock]   temp=22.8C humid=51% cover=open
-[osd]    lat=42.35470 lng=-71.04364 alt=53.1m bat=93% home=334m mode=5 rtk=4
 ...
 [event]  HMS alarm: compass interference (Reminder) [battery delta 58mV, below 200mV threshold]
 ```

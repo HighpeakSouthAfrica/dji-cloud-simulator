@@ -63,6 +63,10 @@ describe('offline scenario', () => {
     // Message 2: OSD with position
     assert.match(messages[2].topic, /thing\/product\/TEST-DEV-001\/osd/);
     assert.equal(typeof messages[2].payload.latitude, 'number');
+    assert.equal(messages[2].payload.latitude, -26.0642);
+    assert.equal(messages[2].payload.longitude, 27.9656);
+    assert.equal(messages[2].payload.home_latitude, -26.0642);
+    assert.equal(messages[2].payload.home_longitude, 27.9656);
 
     // Message 3: status offline
     assert.match(messages[3].topic, /sys\/product\/TEST-GW-001\/status/);
